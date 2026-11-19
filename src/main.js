@@ -356,10 +356,16 @@ function weekOfYear(date) {
   return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
+function dayOfYear(date) {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = startOfDay(date) - start + (start.getTimezoneOffset() - date.getTimezoneOffset()) * 60000;
+  return Math.floor(diff / 86400000);
+}
+
 function renderCalendar(now) {
   dateEl.textContent =
     `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ` +
-    `星期${WEEKDAYS[now.getDay()]} · 第${weekOfYear(now)}周`;
+    `星期${WEEKDAYS[now.getDay()]} 第${weekOfYear(now)}周 第${dayOfYear(now)}天`;
 
   if (typeof Solar === "undefined") {
     lunarDateEl.textContent = "农历不可用";
@@ -369,9 +375,9 @@ function renderCalendar(now) {
   const solar = Solar.fromDate(now);
   const lunar = solar.getLunar();
   lunarDateEl.textContent =
-    `农历${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}日 · ` +
-    `${lunar.getYearInGanZhi()}${lunar.getYearShengXiao()}年 · ` +
-    `${lunar.getMonthInGanZhi()}月 · ${lunar.getDayInGanZhi()}日`;
+    `农历${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}日 ` +
+    `${lunar.getYearInGanZhi()}${lunar.getYearShengXiao()}年 ` +
+    `${lunar.getMonthInGanZhi()}月 ${lunar.getDayInGanZhi()}日`;
   const festivals = [...solar.getFestivals(), ...lunar.getFestivals()];
   lunarTagEl.textContent = lunar.getJieQi() || festivals[0] || "";
 }
@@ -578,7 +584,7 @@ async function updateWeather(location) {
     if (!Number.isFinite(temperature) || !Number.isFinite(humidity)) {
       throw new Error("天气数据异常");
     }
-    weatherLabelEl.textContent = `${location.city} · ${weatherText(current.weather_code)}`;
+    weatherLabelEl.textContent = `${location.city} ${weatherText(current.weather_code)}`;
     weatherTempEl.textContent = `${Math.round(temperature)}°`;
     weatherHumidityEl.textContent = `${Math.round(humidity)}%`;
     const daily = data.daily ?? {};
@@ -594,7 +600,7 @@ async function updateWeather(location) {
     );
   } catch (error) {
     console.error("天气获取失败", error);
-    weatherLabelEl.textContent = `${location.city} · 天气获取失败`;
+    weatherLabelEl.textContent = `${location.city} 天气获取失败`;
     weatherTempEl.textContent = "--°";
     weatherHumidityEl.textContent = "--%";
     weatherTempRangeEl.textContent = "";
@@ -638,7 +644,7 @@ async function refreshWeather() {
       weatherLabelEl.textContent = "定位中…";
       location = await locate();
     }
-    weatherLabelEl.textContent = `${location.city} · 更新中`;
+    weatherLabelEl.textContent = `${location.city} 更新中`;
     await Promise.allSettled([updateWeather(location), updateAir(location)]);
     if (weatherLabelEl.textContent.includes("获取失败")) ok = false;
   } catch (error) {
@@ -715,7 +721,7 @@ function renderCityResults(results) {
     const name = document.createElement("span");
     name.textContent = item.name;
     const meta = document.createElement("small");
-    meta.textContent = [item.admin1, item.country].filter(Boolean).join(" · ");
+    meta.textContent = [item.admin1, item.country].filter(Boolean).join(" ");
     button.append(name, meta);
     locatorResultsEl.appendChild(button);
   }
