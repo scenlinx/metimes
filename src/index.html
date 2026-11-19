@@ -17,6 +17,25 @@
           <span id="clock-hm">--:--</span><span class="seconds" id="clock-seconds">:--</span>
         </div>
         <div class="date" id="date">正在同步时间…</div>
+        <div class="lunar" id="lunar">
+          <span id="lunar-date">农历加载中</span>
+          <span class="lunar-tag" id="lunar-tag"></span>
+        </div>
+      </div>
+
+      <div class="conditions">
+        <div class="chip">
+          <span class="chip-label ellipsis" id="weather-label">定位中…</span>
+          <span class="chip-value" id="weather-temp">--°</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">湿度</span>
+          <span class="chip-value" id="weather-humidity">--%</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">空气质量</span>
+          <span class="chip-value" id="weather-aqi">--</span>
+        </div>
       </div>
 
       <div class="hint" id="hint">拖动移动 · 右键设置</div>
@@ -31,10 +50,15 @@
         <span class="check" aria-hidden="true">✓</span>
         <span>显示秒数</span>
       </button>
+      <button class="menu-item" id="refresh-weather" role="menuitem">
+        <span class="check" aria-hidden="true"></span>
+        <span>刷新天气</span>
+      </button>
       <div class="menu-sep" role="separator"></div>
       <button class="menu-item danger" id="quit" role="menuitem">退出挂件</button>
     </div>
 
+    <script src="vendor/lunar.js"></script>
     <script src="main.js"></script>
   </body>
 </html>

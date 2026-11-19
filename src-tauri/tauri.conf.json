@@ -13,7 +13,7 @@
         "label": "main",
         "title": "Metimes",
         "width": 340,
-        "height": 176,
+        "height": 220,
         "resizable": false,
         "maximizable": false,
         "minimizable": false,
@@ -27,7 +27,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ipwho.is https://ipapi.co https://api.bigdatacloud.net https://api.open-meteo.com https://air-quality-api.open-meteo.com"
     }
   },
   "bundle": {

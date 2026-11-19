@@ -36,12 +36,13 @@ body {
   width: 100%;
   height: 100%;
   max-width: 320px;
-  max-height: 156px;
+  max-height: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  padding: 18px 14px 14px;
+  gap: 10px;
   overflow: hidden;
   cursor: grab;
   border-radius: var(--radius);
@@ -83,7 +84,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   pointer-events: none;
 }
 
@@ -98,12 +99,12 @@ body {
 }
 
 #clock-hm {
-  font-size: 60px;
+  font-size: 54px;
   font-weight: 600;
 }
 
 .seconds {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 500;
   letter-spacing: -1px;
   padding-left: 4px;
@@ -112,18 +113,103 @@ body {
 }
 
 .date {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 450;
   letter-spacing: 0.6px;
   color: var(--muted);
 }
 
+.lunar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  max-width: 100%;
+  font-size: 11.5px;
+  letter-spacing: 0.4px;
+  color: rgba(244, 245, 251, 0.4);
+  white-space: nowrap;
+}
+
+.lunar-tag {
+  color: var(--accent-2);
+}
+
+.lunar-tag:not(:empty)::before {
+  content: "·";
+  margin: 0 5px;
+  color: rgba(244, 245, 251, 0.24);
+}
+
+.conditions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.1fr;
+  gap: 6px;
+}
+
+.chip {
+  min-width: 0;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 9px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chip-label {
+  font-size: 10px;
+  line-height: 1;
+  color: rgba(244, 245, 251, 0.45);
+  letter-spacing: 0.3px;
+}
+
+.ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chip-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.aqi-good {
+  color: #6fd68c;
+}
+
+.aqi-fair {
+  color: #d3dd63;
+}
+
+.aqi-light {
+  color: #f0b25a;
+}
+
+.aqi-mid {
+  color: #f08a5a;
+}
+
+.aqi-heavy {
+  color: #ee6a6a;
+}
+
+.aqi-severe {
+  color: #d45aa5;
+}
+
 .hint {
   position: absolute;
-  bottom: 10px;
-  font-size: 10.5px;
+  bottom: 7px;
+  font-size: 10px;
   letter-spacing: 0.8px;
-  color: rgba(244, 245, 251, 0.3);
+  color: rgba(244, 245, 251, 0.26);
   opacity: 1;
   transition: opacity 0.8s ease;
   pointer-events: none;
