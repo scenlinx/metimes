@@ -60,6 +60,15 @@ body {
   cursor: grabbing;
 }
 
+.widget.locked,
+.widget.locked:active {
+  cursor: default;
+}
+
+.widget.locked .grip {
+  opacity: 0.1;
+}
+
 .grip {
   position: absolute;
   top: 9px;

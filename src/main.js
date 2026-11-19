@@ -24,10 +24,12 @@ const locatorResultsEl = document.getElementById("locator-results");
 const locateAutoEl = document.getElementById("locate-auto");
 const locateCancelEl = document.getElementById("locate-cancel");
 const setCityEl = document.getElementById("set-city");
+const toggleLockEl = document.getElementById("toggle-lock");
 
 const STORAGE_KEYS = {
   alwaysOnTop: "metimes:always-on-top",
   showSeconds: "metimes:show-seconds",
+  lockPosition: "metimes:lock-position",
   location: "metimes:location-v5",
 };
 
@@ -82,6 +84,7 @@ const WEATHER_TEXT = {
 const prefs = {
   alwaysOnTop: readBool(STORAGE_KEYS.alwaysOnTop, true),
   showSeconds: readBool(STORAGE_KEYS.showSeconds, true),
+  lockPosition: readBool(STORAGE_KEYS.lockPosition, false),
 };
 
 const pad = (value) => String(value).padStart(2, "0");
@@ -140,6 +143,9 @@ function applyPrefs() {
   secondsEl.classList.toggle("hidden", !prefs.showSeconds);
   toggleSecondsEl.setAttribute("aria-checked", String(prefs.showSeconds));
   toggleTopEl.setAttribute("aria-checked", String(prefs.alwaysOnTop));
+  toggleLockEl.setAttribute("aria-checked", String(prefs.lockPosition));
+  widget.classList.toggle("locked", prefs.lockPosition);
+  hintEl.textContent = prefs.lockPosition ? "位置已锁定 · 右键设置" : "拖动移动 · 右键设置";
 }
 
 async function applyAlwaysOnTop() {
@@ -166,6 +172,7 @@ function showMenu(x, y) {
 
 async function startDrag(event) {
   if (event.button !== 0) return;
+  if (prefs.lockPosition) return;
   if (event.target.closest(".menu, .chip-action, .locator")) return;
   if (!invoke) return;
   try {
@@ -180,6 +187,12 @@ async function toggleAlwaysOnTop() {
   writeBool(STORAGE_KEYS.alwaysOnTop, prefs.alwaysOnTop);
   applyPrefs();
   await applyAlwaysOnTop();
+}
+
+function toggleLock() {
+  prefs.lockPosition = !prefs.lockPosition;
+  writeBool(STORAGE_KEYS.lockPosition, prefs.lockPosition);
+  applyPrefs();
 }
 
 function toggleSeconds() {
@@ -482,6 +495,7 @@ window.addEventListener("blur", hideMenu);
 
 toggleTopEl.addEventListener("click", toggleAlwaysOnTop);
 toggleSecondsEl.addEventListener("click", toggleSeconds);
+toggleLockEl.addEventListener("click", toggleLock);
 refreshWeatherEl.addEventListener("click", () => refreshWeather());
 setCityEl.addEventListener("click", openLocator);
 weatherChipEl.addEventListener("click", openLocator);
