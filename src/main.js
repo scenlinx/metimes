@@ -209,7 +209,7 @@ function renderCountdowns() {
     return;
   }
 
-  for (const item of items.slice(0, 3)) {
+  for (const item of items.slice(0, 5)) {
     const row = document.createElement("li");
     row.className = "countdown-item";
 
