@@ -184,6 +184,10 @@ body {
   text-overflow: ellipsis;
 }
 
+.aqi-level:not(:empty) {
+  margin-left: 4px;
+}
+
 .chip-value {
   font-size: 13px;
   font-weight: 600;

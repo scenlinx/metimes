@@ -18,6 +18,7 @@ const weatherTempRangeEl = document.getElementById("weather-temp-range");
 const weatherHumidityEl = document.getElementById("weather-humidity");
 const weatherHumidityRangeEl = document.getElementById("weather-humidity-range");
 const weatherAqiEl = document.getElementById("weather-aqi");
+const weatherAqiLevelEl = document.getElementById("aqi-level");
 const weatherAqiRangeEl = document.getElementById("weather-aqi-range");
 const weatherChipEl = document.getElementById("weather-chip");
 const locatorEl = document.getElementById("locator");
@@ -545,12 +546,11 @@ function dailyRange(min, max, unit) {
 }
 
 function setAqi(value, min, max) {
-  weatherAqiEl.className = "chip-value";
+  weatherAqiEl.textContent = "--";
+  weatherAqiLevelEl.textContent = "";
+  weatherAqiLevelEl.className = "aqi-level";
   weatherAqiRangeEl.textContent = dailyRange(min, max, "");
-  if (!Number.isFinite(value)) {
-    weatherAqiEl.textContent = "--";
-    return;
-  }
+  if (!Number.isFinite(value)) return;
   let level = "优";
   let color = "aqi-good";
   if (value > 300) {
@@ -569,8 +569,9 @@ function setAqi(value, min, max) {
     level = "良";
     color = "aqi-fair";
   }
-  weatherAqiEl.textContent = `${Math.round(value)} ${level}`;
-  weatherAqiEl.classList.add(color);
+  weatherAqiEl.textContent = String(Math.round(value));
+  weatherAqiLevelEl.textContent = level;
+  weatherAqiLevelEl.classList.add(color);
 }
 
 async function updateWeather(location) {
