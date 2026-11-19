@@ -284,33 +284,28 @@ body {
   color: rgba(244, 245, 251, 0.35);
 }
 
-.countdown-form {
+.countdown-form-row {
   flex: none;
   display: flex;
-  flex-direction: column;
   gap: 6px;
 }
 
-.countdown-form-row {
-  display: flex;
-  gap: 6px;
+.countdown-name-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .countdown-date {
-  flex: 1;
-  min-width: 0;
+  flex: none;
+  width: 124px;
+  padding: 0 4px;
   color-scheme: dark;
 }
 
-.countdown-add {
+.locator-btn.countdown-add {
   flex: none;
-  width: 62px;
-}
-
-.countdown-note {
-  flex: none;
-  font-size: 10px;
-  color: rgba(244, 245, 251, 0.32);
+  width: 52px;
+  height: 32px;
 }
 
 .countdown-manage-row {
@@ -467,11 +462,12 @@ body {
   position: fixed;
   z-index: 20;
   min-width: 148px;
-  padding: 6px;
+  max-height: calc(100vh - 12px);
+  overflow-y: auto;
+  padding: 5px;
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: var(--menu-bg);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   cursor: default;
@@ -498,13 +494,14 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 9px;
+  padding: 3px 8px;
   border: 0;
   border-radius: 2px;
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
+  line-height: 1.35;
   text-align: left;
   cursor: pointer;
   transition: background 0.12s ease;
@@ -535,6 +532,6 @@ body {
 
 .menu-sep {
   height: 1px;
-  margin: 4px 6px;
+  margin: 3px 6px;
   background: rgba(255, 255, 255, 0.08);
 }

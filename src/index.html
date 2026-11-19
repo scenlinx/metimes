@@ -52,21 +52,18 @@
       </div>
 
       <div class="locator" id="countdown-panel" hidden>
-        <div class="countdown-form">
+        <div class="countdown-form-row">
           <input
-            class="locator-input"
+            class="locator-input countdown-name-input"
             id="countdown-name"
             type="text"
             placeholder="名称，如 生日"
             autocomplete="off"
             spellcheck="false"
           />
-          <div class="countdown-form-row">
-            <input class="locator-input countdown-date" id="countdown-date" type="date" />
-            <button class="locator-btn countdown-add" id="countdown-add">添加</button>
-          </div>
+          <input class="locator-input countdown-date" id="countdown-date" type="date" />
+          <button class="locator-btn countdown-add" id="countdown-add">添加</button>
         </div>
-        <div class="countdown-note">自动节日会自动参与排序</div>
         <div class="locator-results" id="countdown-manage-list"></div>
         <div class="locator-actions">
           <button class="locator-btn" id="countdown-close">完成</button>
