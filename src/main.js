@@ -17,11 +17,18 @@ const weatherLabelEl = document.getElementById("weather-label");
 const weatherTempEl = document.getElementById("weather-temp");
 const weatherHumidityEl = document.getElementById("weather-humidity");
 const weatherAqiEl = document.getElementById("weather-aqi");
+const weatherChipEl = document.getElementById("weather-chip");
+const locatorEl = document.getElementById("locator");
+const cityInputEl = document.getElementById("city-input");
+const locatorResultsEl = document.getElementById("locator-results");
+const locateAutoEl = document.getElementById("locate-auto");
+const locateCancelEl = document.getElementById("locate-cancel");
+const setCityEl = document.getElementById("set-city");
 
 const STORAGE_KEYS = {
   alwaysOnTop: "metimes:always-on-top",
   showSeconds: "metimes:show-seconds",
-  location: "metimes:location",
+  location: "metimes:location-v3",
 };
 
 const LOCATION_TTL = 6 * 60 * 60 * 1000;
@@ -30,6 +37,7 @@ const WEATHER_RETRY = 2 * 60 * 1000;
 
 const GEO_URL = "https://ipwho.is/?lang=zh-CN";
 const GEO_FALLBACK_URL = "https://ipapi.co/json/";
+const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const REVERSE_GEO_URL =
   "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}" +
   "&longitude={lon}&localityLanguage=zh";
@@ -99,6 +107,9 @@ const pad = (value) => String(value).padStart(2, "0");
 let lastDayKey = "";
 let weatherTimer = null;
 let refreshing = false;
+let refreshAgain = false;
+let citySearchTimer = null;
+let citySearchToken = 0;
 
 function readBool(key, fallback) {
   const stored = localStorage.getItem(key);
@@ -173,7 +184,7 @@ function showMenu(x, y) {
 
 async function startDrag(event) {
   if (event.button !== 0) return;
-  if (event.target.closest(".menu")) return;
+  if (event.target.closest(".menu, .chip-action, .locator")) return;
   if (!invoke) return;
   try {
     await invoke("start_drag");
@@ -210,14 +221,67 @@ async function getJson(url, timeout = 12000) {
 function readLocation() {
   try {
     const cached = JSON.parse(localStorage.getItem(STORAGE_KEYS.location));
-    if (cached && Date.now() - cached.ts < LOCATION_TTL) return cached;
+    if (cached && (cached.manual || Date.now() - cached.ts < LOCATION_TTL)) {
+      return cached;
+    }
   } catch {
     // ignore malformed cache
   }
   return null;
 }
 
+async function locateSystem() {
+  if (!invoke) return null;
+  try {
+    const system = await invoke("locate_system");
+    if (system && Number.isFinite(system.latitude) && Number.isFinite(system.longitude)) {
+      const city = (await reverseGeocodeZh(system.latitude, system.longitude)) || "当前位置";
+      return {
+        city,
+        latitude: system.latitude,
+        longitude: system.longitude,
+        ts: Date.now(),
+        system: true,
+      };
+    }
+  } catch (error) {
+    console.warn("系统定位不可用", error);
+  }
+  return null;
+}
+
+async function locateDirect() {
+  if (!invoke) return null;
+  try {
+    const direct = await invoke("locate_direct");
+    if (direct && Number.isFinite(direct.latitude) && Number.isFinite(direct.longitude)) {
+      return {
+        city: direct.city,
+        latitude: direct.latitude,
+        longitude: direct.longitude,
+        ts: Date.now(),
+        direct: true,
+      };
+    }
+  } catch (error) {
+    console.warn("直连定位不可用", error);
+  }
+  return null;
+}
+
 async function locate() {
+  const system = await locateSystem();
+  if (system) {
+    localStorage.setItem(STORAGE_KEYS.location, JSON.stringify(system));
+    return system;
+  }
+
+  const direct = await locateDirect();
+  if (direct) {
+    localStorage.setItem(STORAGE_KEYS.location, JSON.stringify(direct));
+    return direct;
+  }
+
   const providers = [locateByIpwho, locateByIpapi];
   for (const provider of providers) {
     try {
@@ -249,21 +313,27 @@ async function locateByIpwho() {
   return buildLocation(data.city || data.region, data.latitude, data.longitude);
 }
 
+async function reverseGeocodeZh(latitude, longitude) {
+  try {
+    const zh = await getJson(
+      REVERSE_GEO_URL.replace("{lat}", latitude).replace("{lon}", longitude),
+      10000,
+    );
+    return zh.city || zh.locality || "";
+  } catch (error) {
+    console.warn("地名翻译失败", error);
+    return "";
+  }
+}
+
 async function locateByIpapi() {
   const data = await getJson(GEO_FALLBACK_URL, 10000);
   if (!data || data.error) return null;
   const location = buildLocation(data.city || data.region, data.latitude, data.longitude);
   if (!location) return null;
 
-  try {
-    const zh = await getJson(
-      REVERSE_GEO_URL.replace("{lat}", location.latitude).replace("{lon}", location.longitude),
-      12000,
-    );
-    location.city = zh.city || zh.locality || location.city;
-  } catch (error) {
-    console.warn("地名翻译失败", error);
-  }
+  const city = await reverseGeocodeZh(location.latitude, location.longitude);
+  if (city) location.city = city;
   return location;
 }
 
@@ -347,7 +417,10 @@ function scheduleWeatherRefresh(delay) {
 }
 
 async function refreshWeather() {
-  if (refreshing) return;
+  if (refreshing) {
+    refreshAgain = true;
+    return;
+  }
   refreshing = true;
   let ok = true;
   try {
@@ -368,15 +441,92 @@ async function refreshWeather() {
     setAqi(NaN);
   } finally {
     refreshing = false;
+    if (refreshAgain) {
+      refreshAgain = false;
+      refreshWeather();
+      return;
+    }
     scheduleWeatherRefresh(ok ? WEATHER_INTERVAL : WEATHER_RETRY);
   }
+}
+
+function openLocator() {
+  hideMenu();
+  locatorEl.hidden = false;
+  cityInputEl.value = "";
+  locatorResultsEl.innerHTML = '<div class="locator-empty">输入城市名搜索</div>';
+  cityInputEl.focus();
+}
+
+function hideLocator() {
+  if (locatorEl.hidden) return;
+  locatorEl.hidden = true;
+  window.clearTimeout(citySearchTimer);
+  citySearchToken += 1;
+}
+
+async function searchCity(query) {
+  const keyword = query.trim();
+  if (!keyword) {
+    locatorResultsEl.innerHTML = '<div class="locator-empty">输入城市名搜索</div>';
+    return;
+  }
+
+  const token = ++citySearchToken;
+  locatorResultsEl.innerHTML = '<div class="locator-empty">搜索中…</div>';
+  try {
+    const data = await getJson(
+      `${GEOCODE_URL}?name=${encodeURIComponent(keyword)}&count=6&language=zh&format=json`,
+      9000,
+    );
+    if (token !== citySearchToken || locatorEl.hidden) return;
+    renderCityResults(data.results ?? []);
+  } catch (error) {
+    console.error("城市搜索失败", error);
+    if (token !== citySearchToken) return;
+    locatorResultsEl.innerHTML = '<div class="locator-empty">搜索失败，请稍后重试</div>';
+  }
+}
+
+function renderCityResults(results) {
+  if (!results.length) {
+    locatorResultsEl.innerHTML = '<div class="locator-empty">未找到匹配的城市</div>';
+    return;
+  }
+
+  locatorResultsEl.innerHTML = "";
+  for (const item of results) {
+    const button = document.createElement("button");
+    button.className = "locator-result";
+    button.dataset.city = item.name;
+    button.dataset.lat = String(item.latitude);
+    button.dataset.lon = String(item.longitude);
+
+    const name = document.createElement("span");
+    name.textContent = item.name;
+    const meta = document.createElement("small");
+    meta.textContent = [item.admin1, item.country].filter(Boolean).join(" · ");
+    button.append(name, meta);
+    locatorResultsEl.appendChild(button);
+  }
+}
+
+function selectCity(city, latitude, longitude) {
+  localStorage.setItem(
+    STORAGE_KEYS.location,
+    JSON.stringify({ city, latitude, longitude, manual: true, ts: Date.now() }),
+  );
+  hideLocator();
+  refreshWeather();
 }
 
 widget.addEventListener("pointerdown", startDrag);
 
 widget.addEventListener("contextmenu", (event) => {
   event.preventDefault();
-  showMenu(event.clientX, event.clientY);
+  if (locatorEl.hidden) {
+    showMenu(event.clientX, event.clientY);
+  }
 });
 
 document.addEventListener("pointerdown", (event) => {
@@ -386,7 +536,10 @@ document.addEventListener("pointerdown", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") hideMenu();
+  if (event.key === "Escape") {
+    hideMenu();
+    hideLocator();
+  }
 });
 
 window.addEventListener("blur", hideMenu);
@@ -394,6 +547,36 @@ window.addEventListener("blur", hideMenu);
 toggleTopEl.addEventListener("click", toggleAlwaysOnTop);
 toggleSecondsEl.addEventListener("click", toggleSeconds);
 refreshWeatherEl.addEventListener("click", () => refreshWeather());
+setCityEl.addEventListener("click", openLocator);
+weatherChipEl.addEventListener("click", openLocator);
+locateCancelEl.addEventListener("click", hideLocator);
+locateAutoEl.addEventListener("click", () => {
+  localStorage.removeItem(STORAGE_KEYS.location);
+  hideLocator();
+  refreshWeather();
+});
+
+cityInputEl.addEventListener("input", () => {
+  window.clearTimeout(citySearchTimer);
+  citySearchTimer = window.setTimeout(() => searchCity(cityInputEl.value), 350);
+});
+
+cityInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    window.clearTimeout(citySearchTimer);
+    searchCity(cityInputEl.value);
+  }
+});
+
+locatorResultsEl.addEventListener("click", (event) => {
+  const item = event.target.closest(".locator-result");
+  if (!item) return;
+  const latitude = Number(item.dataset.lat);
+  const longitude = Number(item.dataset.lon);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+  selectCity(item.dataset.city, latitude, longitude);
+});
+
 quitEl.addEventListener("click", () => {
   if (invoke) {
     invoke("quit_app");
