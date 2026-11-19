@@ -2,7 +2,6 @@ const invoke =
   window.__TAURI__?.core?.invoke ?? window.__TAURI__?.invoke ?? null;
 
 const widget = document.getElementById("widget");
-const timeEl = document.getElementById("time");
 const hmEl = document.getElementById("clock-hm");
 const secondsEl = document.getElementById("clock-seconds");
 const dateEl = document.getElementById("date");
@@ -26,6 +25,14 @@ const locateAutoEl = document.getElementById("locate-auto");
 const locateCancelEl = document.getElementById("locate-cancel");
 const setCityEl = document.getElementById("set-city");
 const toggleLockEl = document.getElementById("toggle-lock");
+const setCountdownsEl = document.getElementById("set-countdowns");
+const countdownPanelEl = document.getElementById("countdown-panel");
+const countdownListEl = document.getElementById("countdown-list");
+const countdownNameEl = document.getElementById("countdown-name");
+const countdownDateEl = document.getElementById("countdown-date");
+const countdownAddEl = document.getElementById("countdown-add");
+const countdownManageListEl = document.getElementById("countdown-manage-list");
+const countdownCloseEl = document.getElementById("countdown-close");
 
 const STORAGE_KEYS = {
   alwaysOnTop: "metimes:always-on-top",
@@ -33,6 +40,7 @@ const STORAGE_KEYS = {
   lockPosition: "metimes:lock-position",
   clockOffset: "metimes:clock-offset",
   location: "metimes:location-v5",
+  countdowns: "metimes:countdowns",
 };
 
 const LOCATION_TTL = 6 * 60 * 60 * 1000;
@@ -108,6 +116,204 @@ function writeBool(key, value) {
   localStorage.setItem(key, String(value));
 }
 
+function readCountdowns() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.countdowns) ?? "[]");
+    return Array.isArray(stored)
+      ? stored.filter((entry) => entry && entry.name && /^\d{4}-\d{2}-\d{2}$/.test(entry.date))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCountdowns() {
+  localStorage.setItem(STORAGE_KEYS.countdowns, JSON.stringify(countdowns));
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function parseISODate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function formatISODate(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function lunarHolidayDate(lunarYear, month, day) {
+  const solar = Lunar.fromYmd(lunarYear, month, day).getSolar();
+  return new Date(solar.getYear(), solar.getMonth() - 1, solar.getDay());
+}
+
+function qingmingDate(year) {
+  for (let day = 1; day <= 15; day += 1) {
+    const date = new Date(year, 3, day);
+    if (Lunar.fromDate(date).getJieQi() === "清明") return date;
+  }
+  return new Date(year, 3, 5);
+}
+
+function holidayDate(definition, year) {
+  switch (definition.kind) {
+    case "solar":
+      return new Date(year, definition.month - 1, definition.day);
+    case "lunar":
+      return lunarHolidayDate(year, definition.month, definition.day);
+    case "chuxi":
+      return new Date(lunarHolidayDate(year, 1, 1).getTime() - 86400000);
+    case "qingming":
+      return qingmingDate(year);
+    default:
+      return null;
+  }
+}
+
+function nextHoliday(definition, today) {
+  const year = today.getFullYear();
+  return [year, year + 1]
+    .map((target) => holidayDate(definition, target))
+    .find((date) => date && startOfDay(date) >= today) ?? null;
+}
+
+function countdownDays(target, today) {
+  return Math.round((startOfDay(target) - today) / 86400000);
+}
+
+function renderCountdowns() {
+  const today = startOfDay(new Date());
+  const items = [];
+
+  for (const definition of AUTO_HOLIDAYS) {
+    const date = nextHoliday(definition, today);
+    if (date) items.push({ name: definition.name, date });
+  }
+
+  for (const entry of countdowns) {
+    const date = parseISODate(entry.date);
+    if (date && startOfDay(date) >= today) items.push({ name: entry.name, date });
+  }
+
+  items.sort((a, b) => a.date - b.date);
+
+  countdownListEl.innerHTML = "";
+  if (!items.length) {
+    const empty = document.createElement("li");
+    empty.className = "countdown-empty";
+    empty.textContent = "暂无倒计时";
+    countdownListEl.append(empty);
+    return;
+  }
+
+  for (const item of items.slice(0, 3)) {
+    const row = document.createElement("li");
+    row.className = "countdown-item";
+
+    const name = document.createElement("span");
+    name.className = "countdown-name";
+    name.textContent = item.name;
+
+    const days = document.createElement("span");
+    days.className = "countdown-days";
+    const remaining = countdownDays(item.date, today);
+    days.textContent = remaining === 0 ? "今天" : remaining === 1 ? "明天" : `${remaining}天`;
+
+    row.append(name, days);
+    countdownListEl.append(row);
+  }
+}
+
+function renderCountdownManage() {
+  countdownManageListEl.innerHTML = "";
+  const sorted = [...countdowns].sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!sorted.length) {
+    const empty = document.createElement("div");
+    empty.className = "locator-empty";
+    empty.textContent = "还没有手动倒计时";
+    countdownManageListEl.append(empty);
+    return;
+  }
+
+  for (const entry of sorted) {
+    const row = document.createElement("div");
+    row.className = "countdown-manage-row";
+
+    const name = document.createElement("span");
+    name.className = "countdown-manage-name";
+    name.textContent = entry.name;
+
+    const date = document.createElement("span");
+    date.className = "countdown-manage-date";
+    date.textContent = entry.date;
+
+    const remove = document.createElement("button");
+    remove.className = "countdown-del";
+    remove.dataset.id = entry.id;
+    remove.textContent = "删除";
+
+    row.append(name, date, remove);
+    countdownManageListEl.append(row);
+  }
+}
+
+function openCountdownPanel() {
+  hideMenu();
+  hideLocator();
+  countdownPanelEl.hidden = false;
+  countdownDateEl.min = formatISODate(new Date());
+  renderCountdownManage();
+  countdownNameEl.focus();
+}
+
+function hideCountdownPanel() {
+  countdownPanelEl.hidden = true;
+}
+
+function addCountdown() {
+  const name = countdownNameEl.value.trim();
+  const date = parseISODate(countdownDateEl.value);
+  const today = startOfDay(new Date());
+  if (!name || !date || startOfDay(date) < today) return;
+
+  countdowns.push({
+    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    name: name.slice(0, 24),
+    date: countdownDateEl.value,
+  });
+  saveCountdowns();
+  countdownNameEl.value = "";
+  countdownDateEl.value = "";
+  renderCountdownManage();
+  renderCountdowns();
+  countdownNameEl.focus();
+}
+
+function removeCountdown(id) {
+  countdowns = countdowns.filter((entry) => entry.id !== id);
+  saveCountdowns();
+  renderCountdownManage();
+  renderCountdowns();
+}
+
+const AUTO_HOLIDAYS = [
+  { name: "元旦", kind: "solar", month: 1, day: 1 },
+  { name: "春节", kind: "lunar", month: 1, day: 1 },
+  { name: "元宵节", kind: "lunar", month: 1, day: 15 },
+  { name: "清明节", kind: "qingming" },
+  { name: "劳动节", kind: "solar", month: 5, day: 1 },
+  { name: "端午节", kind: "lunar", month: 5, day: 5 },
+  { name: "中秋节", kind: "lunar", month: 8, day: 15 },
+  { name: "国庆节", kind: "solar", month: 10, day: 1 },
+  { name: "除夕", kind: "chuxi" },
+];
+
+let countdowns = readCountdowns();
+
 async function syncClock() {
   if (!invoke) return;
   try {
@@ -121,45 +327,16 @@ async function syncClock() {
   }
 }
 
-const measureCtx = document.createElement("canvas").getContext("2d");
-
-// Seven-segment glyphs ("1" especially) have uneven side bearings, so the text
-// box being centered does not make the visible digits centered. Measure the ink
-// box of the digits and of the seconds, then shift the row so the whole visible
-// time (HH:MM:SS) looks optically centered.
-function alignTime() {
-  if (!measureCtx) return;
-  const hmStyle = window.getComputedStyle(hmEl);
-  measureCtx.font = `${hmStyle.fontWeight} ${hmStyle.fontSize} "DSEG7"`;
-  const hm = measureCtx.measureText(hmEl.textContent);
-  if (typeof hm.actualBoundingBoxLeft !== "number") return;
-
-  let inkLeft = -hm.actualBoundingBoxLeft;
-  let inkRight = hm.actualBoundingBoxRight;
-
-  if (!secondsEl.classList.contains("hidden")) {
-    const secStyle = window.getComputedStyle(secondsEl);
-    measureCtx.font = `${secStyle.fontWeight} ${secStyle.fontSize} "DSEG7"`;
-    const sec = measureCtx.measureText(secondsEl.textContent);
-    const start = hm.width + (parseFloat(secStyle.paddingLeft) || 0);
-    inkLeft = Math.min(inkLeft, start - sec.actualBoundingBoxLeft);
-    inkRight = Math.max(inkRight, start + sec.actualBoundingBoxRight);
-  }
-
-  const shift = hm.width / 2 - (inkLeft + inkRight) / 2;
-  timeEl.style.setProperty("--time-shift", `${shift.toFixed(1)}px`);
-}
-
 function renderClock() {
   const now = new Date(Date.now() + clockOffset);
   hmEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   secondsEl.textContent = `:${pad(now.getSeconds())}`;
-  alignTime();
 
   const dayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
   if (dayKey !== lastDayKey) {
     lastDayKey = dayKey;
     renderCalendar(now);
+    renderCountdowns();
   }
 
   // Re-align to the next whole second so the clock never drifts.
@@ -188,7 +365,6 @@ function renderCalendar(now) {
 
 function applyPrefs() {
   secondsEl.classList.toggle("hidden", !prefs.showSeconds);
-  alignTime();
   toggleSecondsEl.setAttribute("aria-checked", String(prefs.showSeconds));
   toggleTopEl.setAttribute("aria-checked", String(prefs.alwaysOnTop));
   toggleLockEl.setAttribute("aria-checked", String(prefs.lockPosition));
@@ -449,6 +625,7 @@ async function refreshWeather() {
 
 function openLocator() {
   hideMenu();
+  hideCountdownPanel();
   locatorEl.hidden = false;
   cityInputEl.value = "";
   locatorResultsEl.innerHTML = '<div class="locator-empty">输入城市名搜索</div>';
@@ -521,7 +698,7 @@ widget.addEventListener("pointerdown", startDrag);
 
 document.addEventListener("contextmenu", (event) => {
   event.preventDefault();
-  if (!event.target.closest(".menu") && locatorEl.hidden) {
+  if (!event.target.closest(".menu") && locatorEl.hidden && countdownPanelEl.hidden) {
     showMenu(event.clientX, event.clientY);
   }
 });
@@ -536,6 +713,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     hideMenu();
     hideLocator();
+    hideCountdownPanel();
   }
 });
 
@@ -546,6 +724,19 @@ toggleSecondsEl.addEventListener("click", toggleSeconds);
 toggleLockEl.addEventListener("click", toggleLock);
 refreshWeatherEl.addEventListener("click", () => refreshWeather());
 setCityEl.addEventListener("click", openLocator);
+setCountdownsEl.addEventListener("click", openCountdownPanel);
+countdownAddEl.addEventListener("click", addCountdown);
+countdownCloseEl.addEventListener("click", hideCountdownPanel);
+countdownNameEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") addCountdown();
+});
+countdownDateEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") addCountdown();
+});
+countdownManageListEl.addEventListener("click", (event) => {
+  const button = event.target.closest(".countdown-del");
+  if (button) removeCountdown(button.dataset.id);
+});
 weatherChipEl.addEventListener("click", openLocator);
 locateCancelEl.addEventListener("click", hideLocator);
 locateAutoEl.addEventListener("click", () => {
@@ -582,8 +773,8 @@ quitEl.addEventListener("click", () => {
 });
 
 applyPrefs();
+renderCountdowns();
 renderClock();
-document.fonts.ready.then(alignTime);
 syncClock();
 applyAlwaysOnTop();
 refreshWeather();

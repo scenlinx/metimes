@@ -12,29 +12,60 @@
         <span></span><span></span><span></span>
       </div>
 
-      <div class="clock">
-        <div class="time" id="time">
-          <span id="clock-hm">--:--</span><span class="seconds" id="clock-seconds">:--</span>
+      <div class="panel-main">
+        <div class="top-row">
+          <div class="clock">
+            <div class="time" id="time">
+              <span id="clock-hm">--:--</span><span class="seconds" id="clock-seconds">:--</span>
+            </div>
+            <div class="date" id="date">正在同步时间…</div>
+            <div class="lunar" id="lunar">
+              <span id="lunar-date">农历加载中</span>
+              <span class="lunar-tag" id="lunar-tag"></span>
+            </div>
+          </div>
+
+          <aside class="countdowns">
+            <div class="countdown-title">倒计时</div>
+            <ul class="countdown-list" id="countdown-list"></ul>
+          </aside>
         </div>
-        <div class="date" id="date">正在同步时间…</div>
-        <div class="lunar" id="lunar">
-          <span id="lunar-date">农历加载中</span>
-          <span class="lunar-tag" id="lunar-tag"></span>
+
+        <div class="conditions">
+          <div class="chip chip-action" id="weather-chip" title="点击设置城市">
+            <span class="chip-label ellipsis" id="weather-label">定位中…</span>
+            <span class="chip-value" id="weather-temp">--°</span>
+          </div>
+          <div class="chip">
+            <span class="chip-label">湿度</span>
+            <span class="chip-value" id="weather-humidity">--%</span>
+          </div>
+          <div class="chip">
+            <span class="chip-label">空气质量</span>
+            <span class="chip-value" id="weather-aqi">--</span>
+          </div>
         </div>
       </div>
 
-      <div class="conditions">
-        <div class="chip chip-action" id="weather-chip" title="点击设置城市">
-          <span class="chip-label ellipsis" id="weather-label">定位中…</span>
-          <span class="chip-value" id="weather-temp">--°</span>
+      <div class="locator" id="countdown-panel" hidden>
+        <div class="countdown-form">
+          <input
+            class="locator-input"
+            id="countdown-name"
+            type="text"
+            placeholder="名称，如 生日"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="countdown-form-row">
+            <input class="locator-input countdown-date" id="countdown-date" type="date" />
+            <button class="locator-btn countdown-add" id="countdown-add">添加</button>
+          </div>
         </div>
-        <div class="chip">
-          <span class="chip-label">湿度</span>
-          <span class="chip-value" id="weather-humidity">--%</span>
-        </div>
-        <div class="chip">
-          <span class="chip-label">空气质量</span>
-          <span class="chip-value" id="weather-aqi">--</span>
+        <div class="countdown-note">自动节日会自动参与排序</div>
+        <div class="locator-results" id="countdown-manage-list"></div>
+        <div class="locator-actions">
+          <button class="locator-btn" id="countdown-close">完成</button>
         </div>
       </div>
 
@@ -73,6 +104,10 @@
       <button class="menu-item" id="set-city" role="menuitem">
         <span class="check" aria-hidden="true"></span>
         <span>设置城市…</span>
+      </button>
+      <button class="menu-item" id="set-countdowns" role="menuitem">
+        <span class="check" aria-hidden="true"></span>
+        <span>倒计时设置…</span>
       </button>
       <button class="menu-item" id="refresh-weather" role="menuitem">
         <span class="check" aria-hidden="true"></span>
