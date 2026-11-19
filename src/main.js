@@ -28,7 +28,7 @@ const setCityEl = document.getElementById("set-city");
 const STORAGE_KEYS = {
   alwaysOnTop: "metimes:always-on-top",
   showSeconds: "metimes:show-seconds",
-  location: "metimes:location-v3",
+  location: "metimes:location-v4",
 };
 
 const LOCATION_TTL = 6 * 60 * 60 * 1000;

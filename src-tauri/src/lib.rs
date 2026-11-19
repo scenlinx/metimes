@@ -28,6 +28,68 @@ struct DirectLocation {
     longitude: f64,
 }
 
+#[derive(Deserialize)]
+struct IpIpResponse {
+    ret: Option<String>,
+    data: Option<IpIpData>,
+}
+
+#[derive(Deserialize)]
+struct IpIpData {
+    location: Option<Vec<String>>,
+}
+
+#[derive(Deserialize)]
+struct GeocodeResponse {
+    results: Option<Vec<GeocodeResult>>,
+}
+
+#[derive(Deserialize)]
+struct GeocodeResult {
+    latitude: Option<f64>,
+    longitude: Option<f64>,
+}
+
+/// Uses a domestic IP database for the city name, then geocodes it to coordinates.
+async fn locate_by_cn_database(client: &reqwest::Client) -> Option<DirectLocation> {
+    let response = client.get("https://myip.ipip.net/json").send().await.ok()?;
+    let payload = response.json::<IpIpResponse>().await.ok()?;
+    if payload.ret.as_deref() != Some("ok") {
+        return None;
+    }
+
+    let entries = payload.data?.location?;
+    let city = entries
+        .iter()
+        .skip(1)
+        .take(2)
+        .filter(|entry| !entry.trim().is_empty())
+        .last()?
+        .clone();
+
+    let geocode = client
+        .get("https://geocoding-api.open-meteo.com/v1/search")
+        .query(&[
+            ("name", city.as_str()),
+            ("count", "1"),
+            ("language", "zh"),
+            ("format", "json"),
+        ])
+        .send()
+        .await
+        .ok()?
+        .json::<GeocodeResponse>()
+        .await
+        .ok()?;
+
+    let first = geocode.results?.into_iter().next()?;
+    Some(DirectLocation {
+        city,
+        latitude: first.latitude?,
+        longitude: first.longitude?,
+    })
+}
+
 #[derive(Serialize)]
 struct SystemLocation {
     latitude: f64,
@@ -92,10 +154,14 @@ fn to_location(city: Option<String>, region: Option<String>, lat: Option<f64>, l
 async fn locate_direct() -> Result<Option<DirectLocation>, String> {
     let client = reqwest::Client::builder()
         .no_proxy()
-        .timeout(Duration::from_secs(6))
+        .timeout(Duration::from_secs(8))
         .user_agent("Metimes/0.1")
         .build()
         .map_err(|err| err.to_string())?;
+
+    if let Some(location) = locate_by_cn_database(&client).await {
+        return Ok(Some(location));
+    }
 
     if let Ok(response) = client
         .get("https://ipwho.is/?lang=zh-CN")
