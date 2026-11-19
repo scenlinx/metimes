@@ -471,9 +471,9 @@ function selectCity(city, latitude, longitude) {
 
 widget.addEventListener("pointerdown", startDrag);
 
-widget.addEventListener("contextmenu", (event) => {
+document.addEventListener("contextmenu", (event) => {
   event.preventDefault();
-  if (locatorEl.hidden) {
+  if (!event.target.closest(".menu") && locatorEl.hidden) {
     showMenu(event.clientX, event.clientY);
   }
 });
