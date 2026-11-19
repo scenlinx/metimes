@@ -3,24 +3,6 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, WebviewWindow};
 
-#[derive(Deserialize)]
-struct IpWhoResponse {
-    success: Option<bool>,
-    city: Option<String>,
-    region: Option<String>,
-    latitude: Option<f64>,
-    longitude: Option<f64>,
-}
-
-#[derive(Deserialize)]
-struct IpApiResponse {
-    error: Option<bool>,
-    city: Option<String>,
-    region: Option<String>,
-    latitude: Option<f64>,
-    longitude: Option<f64>,
-}
-
 #[derive(Serialize)]
 struct DirectLocation {
     city: String,
@@ -132,23 +114,6 @@ async fn locate_system() -> Option<SystemLocation> {
     }
 }
 
-fn to_location(city: Option<String>, region: Option<String>, lat: Option<f64>, lon: Option<f64>) -> Option<DirectLocation> {
-    let latitude = lat?;
-    let longitude = lon?;
-    if !latitude.is_finite() || !longitude.is_finite() {
-        return None;
-    }
-    let city = city
-        .filter(|value| !value.trim().is_empty())
-        .or(region)
-        .unwrap_or_else(|| "当前位置".to_string());
-    Some(DirectLocation {
-        city,
-        latitude,
-        longitude,
-    })
-}
-
 /// Resolves the location with a direct connection, bypassing the system HTTP proxy.
 #[tauri::command]
 async fn locate_direct() -> Result<Option<DirectLocation>, String> {
@@ -159,35 +124,7 @@ async fn locate_direct() -> Result<Option<DirectLocation>, String> {
         .build()
         .map_err(|err| err.to_string())?;
 
-    if let Some(location) = locate_by_cn_database(&client).await {
-        return Ok(Some(location));
-    }
-
-    if let Ok(response) = client
-        .get("https://ipwho.is/?lang=zh-CN")
-        .send()
-        .await
-    {
-        if let Ok(data) = response.json::<IpWhoResponse>().await {
-            if data.success != Some(false) {
-                if let Some(location) = to_location(data.city, data.region, data.latitude, data.longitude) {
-                    return Ok(Some(location));
-                }
-            }
-        }
-    }
-
-    if let Ok(response) = client.get("https://ipapi.co/json/").send().await {
-        if let Ok(data) = response.json::<IpApiResponse>().await {
-            if data.error != Some(true) {
-                if let Some(location) = to_location(data.city, data.region, data.latitude, data.longitude) {
-                    return Ok(Some(location));
-                }
-            }
-        }
-    }
-
-    Ok(None)
+    Ok(locate_by_cn_database(&client).await)
 }
 
 /// Lets the OS take over the current mouse press so the whole window can be dragged.

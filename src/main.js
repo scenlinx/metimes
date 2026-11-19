@@ -28,15 +28,13 @@ const setCityEl = document.getElementById("set-city");
 const STORAGE_KEYS = {
   alwaysOnTop: "metimes:always-on-top",
   showSeconds: "metimes:show-seconds",
-  location: "metimes:location-v4",
+  location: "metimes:location-v5",
 };
 
 const LOCATION_TTL = 6 * 60 * 60 * 1000;
 const WEATHER_INTERVAL = 10 * 60 * 1000;
 const WEATHER_RETRY = 2 * 60 * 1000;
 
-const GEO_URL = "https://ipwho.is/?lang=zh-CN";
-const GEO_FALLBACK_URL = "https://ipapi.co/json/";
 const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const REVERSE_GEO_URL =
   "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}" +
@@ -49,22 +47,6 @@ const AIR_URL =
   "&longitude={lon}&current=us_aqi&timezone=auto";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
-
-// Used only when every IP location service is unavailable.
-const TIMEZONE_CITIES = {
-  "Asia/Shanghai": ["上海", 31.2304, 121.4737],
-  "Asia/Urumqi": ["乌鲁木齐", 43.8256, 87.6168],
-  "Asia/Chongqing": ["重庆", 29.563, 106.5516],
-  "Asia/Harbin": ["哈尔滨", 45.8038, 126.535],
-  "Asia/Hong_Kong": ["香港", 22.3193, 114.1694],
-  "Asia/Macau": ["澳门", 22.1987, 113.5439],
-  "Asia/Taipei": ["台北", 25.033, 121.5654],
-  "Asia/Tokyo": ["东京", 35.6762, 139.6503],
-  "Asia/Seoul": ["首尔", 37.5665, 126.978],
-  "Asia/Singapore": ["新加坡", 1.3521, 103.8198],
-  "America/New_York": ["纽约", 40.7128, -74.006],
-  "Europe/London": ["伦敦", 51.5074, -0.1278],
-};
 
 const WEATHER_TEXT = {
   0: "晴",
@@ -282,35 +264,7 @@ async function locate() {
     return direct;
   }
 
-  const providers = [locateByIpwho, locateByIpapi];
-  for (const provider of providers) {
-    try {
-      const location = await provider();
-      if (location) {
-        localStorage.setItem(STORAGE_KEYS.location, JSON.stringify(location));
-        return location;
-      }
-    } catch (error) {
-      console.warn("定位服务不可用", error);
-    }
-  }
-
-  const fallback = timezoneLocation();
-  if (fallback) return fallback;
   throw new Error("定位失败");
-}
-
-function buildLocation(city, latitude, longitude) {
-  const lat = Number(latitude);
-  const lon = Number(longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  return { city: city || "当前位置", latitude: lat, longitude: lon, ts: Date.now() };
-}
-
-async function locateByIpwho() {
-  const data = await getJson(GEO_URL, 8000);
-  if (!data || data.success === false) return null;
-  return buildLocation(data.city || data.region, data.latitude, data.longitude);
 }
 
 async function reverseGeocodeZh(latitude, longitude) {
@@ -324,24 +278,6 @@ async function reverseGeocodeZh(latitude, longitude) {
     console.warn("地名翻译失败", error);
     return "";
   }
-}
-
-async function locateByIpapi() {
-  const data = await getJson(GEO_FALLBACK_URL, 10000);
-  if (!data || data.error) return null;
-  const location = buildLocation(data.city || data.region, data.latitude, data.longitude);
-  if (!location) return null;
-
-  const city = await reverseGeocodeZh(location.latitude, location.longitude);
-  if (city) location.city = city;
-  return location;
-}
-
-function timezoneLocation() {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const entry = TIMEZONE_CITIES[timezone];
-  if (!entry) return null;
-  return { city: entry[0], latitude: entry[1], longitude: entry[2], ts: Date.now() };
 }
 
 function weatherText(code) {
