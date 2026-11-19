@@ -1,4 +1,5 @@
-use std::time::Duration;
+use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, WebviewWindow};
@@ -114,6 +115,82 @@ async fn locate_system() -> Option<SystemLocation> {
     }
 }
 
+const NTP_SERVERS: [&str; 3] = ["ntp.aliyun.com", "cn.pool.ntp.org", "time.windows.com"];
+const NTP_UNIX_OFFSET_SECS: u64 = 2_208_988_800;
+
+fn now_ms() -> i128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|value| value.as_millis() as i128)
+        .unwrap_or_default()
+}
+
+fn query_ntp(server: &str) -> Option<i64> {
+    let addrs: Vec<SocketAddr> = (server, 123u16).to_socket_addrs().ok()?.collect();
+    let addr = *addrs.iter().find(|addr| addr.is_ipv4()).or_else(|| addrs.first())?;
+
+    let bind = if addr.is_ipv4() { "0.0.0.0:0" } else { "[::]:0" };
+    let socket = UdpSocket::bind(bind).ok()?;
+    socket.set_read_timeout(Some(Duration::from_millis(1500))).ok()?;
+    socket.connect(addr).ok()?;
+
+    let mut packet = [0u8; 48];
+    packet[0] = 0x23; // LI = 0, version = 4, mode = 3 (client)
+
+    let sent_at = now_ms();
+    socket.send(&packet).ok()?;
+
+    let mut response = [0u8; 48];
+    let size = socket.recv(&mut response).ok()?;
+    let received_at = now_ms();
+    if size < 48 || response[1] == 0 {
+        return None;
+    }
+
+    let seconds = u32::from_be_bytes([response[40], response[41], response[42], response[43]]) as u64;
+    let fraction = u32::from_be_bytes([response[44], response[45], response[46], response[47]]) as f64
+        / 4_294_967_296.0;
+    if seconds == 0 {
+        return None;
+    }
+
+    let server_ms =
+        (seconds.saturating_sub(NTP_UNIX_OFFSET_SECS) as f64 * 1000.0 + fraction * 1000.0) as i128;
+    let offset = server_ms - (sent_at + received_at) / 2;
+    if offset.abs() > 86_400_000 {
+        return None;
+    }
+    Some(offset as i64)
+}
+
+fn sntp_offset() -> Option<i64> {
+    NTP_SERVERS.iter().find_map(|server| query_ntp(server))
+}
+
+async fn http_offset() -> Option<i64> {
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(6))
+        .build()
+        .ok()?;
+    let response = client.head("https://www.baidu.com").send().await.ok()?;
+    let header = response.headers().get(reqwest::header::DATE)?.to_str().ok()?;
+    let server = httpdate::parse_http_date(header).ok()?;
+    let server_ms = server.duration_since(UNIX_EPOCH).ok()?.as_millis() as i128;
+    Some((server_ms - now_ms()) as i64)
+}
+
+/// Returns the correction between the local clock and a time server, in milliseconds.
+#[tauri::command]
+async fn ntp_offset() -> Result<i64, String> {
+    let blocking = tauri::async_runtime::spawn_blocking(sntp_offset);
+    if let Ok(Ok(Some(offset))) = tokio::time::timeout(Duration::from_secs(6), blocking).await {
+        return Ok(offset);
+    }
+
+    http_offset().await.ok_or_else(|| "校时失败".to_string())
+}
+
 /// Resolves the location with a direct connection, bypassing the system HTTP proxy.
 #[tauri::command]
 async fn locate_direct() -> Result<Option<DirectLocation>, String> {
@@ -155,6 +232,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             locate_system,
             locate_direct,
+            ntp_offset,
             start_drag,
             set_always_on_top,
             quit_app

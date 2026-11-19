@@ -30,6 +30,7 @@ const STORAGE_KEYS = {
   alwaysOnTop: "metimes:always-on-top",
   showSeconds: "metimes:show-seconds",
   lockPosition: "metimes:lock-position",
+  clockOffset: "metimes:clock-offset",
   location: "metimes:location-v5",
 };
 
@@ -90,6 +91,7 @@ const prefs = {
 const pad = (value) => String(value).padStart(2, "0");
 
 let lastDayKey = "";
+let clockOffset = Number(localStorage.getItem(STORAGE_KEYS.clockOffset)) || 0;
 let weatherTimer = null;
 let refreshing = false;
 let refreshAgain = false;
@@ -105,8 +107,21 @@ function writeBool(key, value) {
   localStorage.setItem(key, String(value));
 }
 
+async function syncClock() {
+  if (!invoke) return;
+  try {
+    const offset = await invoke("ntp_offset");
+    if (Number.isFinite(offset)) {
+      clockOffset = offset;
+      localStorage.setItem(STORAGE_KEYS.clockOffset, String(offset));
+    }
+  } catch (error) {
+    console.error("校时失败", error);
+  }
+}
+
 function renderClock() {
-  const now = new Date();
+  const now = new Date(Date.now() + clockOffset);
   hmEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   secondsEl.textContent = `:${pad(now.getSeconds())}`;
 
@@ -117,7 +132,8 @@ function renderClock() {
   }
 
   // Re-align to the next whole second so the clock never drifts.
-  window.setTimeout(renderClock, 1000 - (Date.now() % 1000));
+  const drift = (Date.now() + clockOffset) % 1000;
+  window.setTimeout(renderClock, 1000 - drift);
 }
 
 function renderCalendar(now) {
@@ -535,7 +551,9 @@ quitEl.addEventListener("click", () => {
 
 applyPrefs();
 renderClock();
+syncClock();
 applyAlwaysOnTop();
 refreshWeather();
+window.setInterval(() => syncClock(), 30 * 60 * 1000);
 
 window.setTimeout(() => hintEl.classList.add("hidden"), 4500);
