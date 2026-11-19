@@ -7,7 +7,6 @@ const secondsEl = document.getElementById("clock-seconds");
 const dateEl = document.getElementById("date");
 const lunarDateEl = document.getElementById("lunar-date");
 const lunarTagEl = document.getElementById("lunar-tag");
-const hintEl = document.getElementById("hint");
 const menuEl = document.getElementById("menu");
 const toggleTopEl = document.getElementById("toggle-top");
 const toggleSecondsEl = document.getElementById("toggle-seconds");
@@ -369,7 +368,6 @@ function applyPrefs() {
   toggleTopEl.setAttribute("aria-checked", String(prefs.alwaysOnTop));
   toggleLockEl.setAttribute("aria-checked", String(prefs.lockPosition));
   widget.classList.toggle("locked", prefs.lockPosition);
-  hintEl.textContent = prefs.lockPosition ? "位置已锁定 · 右键设置" : "拖动移动 · 右键设置";
 }
 
 async function applyAlwaysOnTop() {
@@ -779,5 +777,3 @@ syncClock();
 applyAlwaysOnTop();
 refreshWeather();
 window.setInterval(() => syncClock(), 30 * 60 * 1000);
-
-window.setTimeout(() => hintEl.classList.add("hidden"), 4500);

@@ -44,12 +44,12 @@ body {
   width: 100%;
   height: 100%;
   max-width: 380px;
-  max-height: 200px;
+  max-height: 174px;
   display: flex;
   flex-direction: row;
   align-items: stretch;
   justify-content: center;
-  padding: 14px;
+  padding: 12px;
   gap: 12px;
   overflow: hidden;
   cursor: grab;
@@ -73,35 +73,13 @@ body {
   cursor: default;
 }
 
-.widget.locked .grip {
-  opacity: 0.1;
-}
-
-.grip {
-  position: absolute;
-  top: 9px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 4px;
-  opacity: 0.26;
-  pointer-events: none;
-}
-
-.grip span {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #fff;
-}
-
 .panel-main {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
 }
 
@@ -461,21 +439,6 @@ body {
 
 .aqi-severe {
   color: #d45aa5;
-}
-
-.hint {
-  position: absolute;
-  bottom: 7px;
-  font-size: 10px;
-  letter-spacing: 0.8px;
-  color: rgba(244, 245, 251, 0.26);
-  opacity: 1;
-  transition: opacity 0.8s ease;
-  pointer-events: none;
-}
-
-.hint.hidden {
-  opacity: 0;
 }
 
 .seconds.hidden {
