@@ -197,7 +197,7 @@ async fn locate_direct() -> Result<Option<DirectLocation>, String> {
     let client = reqwest::Client::builder()
         .no_proxy()
         .timeout(Duration::from_secs(8))
-        .user_agent("Metimes/0.1")
+        .user_agent("Metimes/1.0")
         .build()
         .map_err(|err| err.to_string())?;
 
