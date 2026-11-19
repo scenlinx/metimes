@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Metimes</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="widget" class="widget" aria-label="桌面时钟">
+      <div class="grip" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div class="clock">
+        <div class="time" id="time">
+          <span id="clock-hm">--:--</span><span class="seconds" id="clock-seconds">:--</span>
+        </div>
+        <div class="date" id="date">正在同步时间…</div>
+      </div>
+
+      <div class="hint" id="hint">拖动移动 · 右键设置</div>
+    </main>
+
+    <div class="menu" id="menu" role="menu" hidden>
+      <button class="menu-item" id="toggle-top" role="menuitemcheckbox" aria-checked="true">
+        <span class="check" aria-hidden="true">✓</span>
+        <span>始终置顶</span>
+      </button>
+      <button class="menu-item" id="toggle-seconds" role="menuitemcheckbox" aria-checked="true">
+        <span class="check" aria-hidden="true">✓</span>
+        <span>显示秒数</span>
+      </button>
+      <div class="menu-sep" role="separator"></div>
+      <button class="menu-item danger" id="quit" role="menuitem">退出挂件</button>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>

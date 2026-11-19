@@ -1,0 +1,14 @@
+{
+  "name": "metimes",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A minimal desktop clock widget built with Tauri 2.x and Rust.",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
