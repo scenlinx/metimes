@@ -2,6 +2,7 @@ const invoke =
   window.__TAURI__?.core?.invoke ?? window.__TAURI__?.invoke ?? null;
 
 const widget = document.getElementById("widget");
+const timeEl = document.getElementById("time");
 const hmEl = document.getElementById("clock-hm");
 const secondsEl = document.getElementById("clock-seconds");
 const dateEl = document.getElementById("date");
@@ -120,10 +121,40 @@ async function syncClock() {
   }
 }
 
+const measureCtx = document.createElement("canvas").getContext("2d");
+
+// Seven-segment glyphs ("1" especially) have uneven side bearings, so the text
+// box being centered does not make the visible digits centered. Measure the ink
+// box of the digits and of the seconds, then shift the row so the whole visible
+// time (HH:MM:SS) looks optically centered.
+function alignTime() {
+  if (!measureCtx) return;
+  const hmStyle = window.getComputedStyle(hmEl);
+  measureCtx.font = `${hmStyle.fontWeight} ${hmStyle.fontSize} "DSEG7"`;
+  const hm = measureCtx.measureText(hmEl.textContent);
+  if (typeof hm.actualBoundingBoxLeft !== "number") return;
+
+  let inkLeft = -hm.actualBoundingBoxLeft;
+  let inkRight = hm.actualBoundingBoxRight;
+
+  if (!secondsEl.classList.contains("hidden")) {
+    const secStyle = window.getComputedStyle(secondsEl);
+    measureCtx.font = `${secStyle.fontWeight} ${secStyle.fontSize} "DSEG7"`;
+    const sec = measureCtx.measureText(secondsEl.textContent);
+    const start = hm.width + (parseFloat(secStyle.paddingLeft) || 0);
+    inkLeft = Math.min(inkLeft, start - sec.actualBoundingBoxLeft);
+    inkRight = Math.max(inkRight, start + sec.actualBoundingBoxRight);
+  }
+
+  const shift = hm.width / 2 - (inkLeft + inkRight) / 2;
+  timeEl.style.setProperty("--time-shift", `${shift.toFixed(1)}px`);
+}
+
 function renderClock() {
   const now = new Date(Date.now() + clockOffset);
   hmEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   secondsEl.textContent = `:${pad(now.getSeconds())}`;
+  alignTime();
 
   const dayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
   if (dayKey !== lastDayKey) {
@@ -157,6 +188,7 @@ function renderCalendar(now) {
 
 function applyPrefs() {
   secondsEl.classList.toggle("hidden", !prefs.showSeconds);
+  alignTime();
   toggleSecondsEl.setAttribute("aria-checked", String(prefs.showSeconds));
   toggleTopEl.setAttribute("aria-checked", String(prefs.alwaysOnTop));
   toggleLockEl.setAttribute("aria-checked", String(prefs.lockPosition));
@@ -551,6 +583,7 @@ quitEl.addEventListener("click", () => {
 
 applyPrefs();
 renderClock();
+document.fonts.ready.then(alignTime);
 syncClock();
 applyAlwaysOnTop();
 refreshWeather();
