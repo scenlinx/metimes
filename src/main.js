@@ -14,8 +14,11 @@ const refreshWeatherEl = document.getElementById("refresh-weather");
 const quitEl = document.getElementById("quit");
 const weatherLabelEl = document.getElementById("weather-label");
 const weatherTempEl = document.getElementById("weather-temp");
+const weatherTempRangeEl = document.getElementById("weather-temp-range");
 const weatherHumidityEl = document.getElementById("weather-humidity");
+const weatherHumidityRangeEl = document.getElementById("weather-humidity-range");
 const weatherAqiEl = document.getElementById("weather-aqi");
+const weatherAqiRangeEl = document.getElementById("weather-aqi-range");
 const weatherChipEl = document.getElementById("weather-chip");
 const locatorEl = document.getElementById("locator");
 const cityInputEl = document.getElementById("city-input");
@@ -52,10 +55,12 @@ const REVERSE_GEO_URL =
   "&longitude={lon}&localityLanguage=zh";
 const WEATHER_URL =
   "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}" +
-  "&current=temperature_2m,relative_humidity_2m,weather_code&timezone=auto";
+  "&current=temperature_2m,relative_humidity_2m,weather_code" +
+  "&daily=temperature_2m_max,temperature_2m_min,relative_humidity_2m_max,relative_humidity_2m_min" +
+  "&forecast_days=1&timezone=auto";
 const AIR_URL =
   "https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}" +
-  "&longitude={lon}&current=us_aqi&timezone=auto";
+  "&longitude={lon}&current=us_aqi&hourly=us_aqi&forecast_days=1&timezone=auto";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -343,10 +348,18 @@ function renderClock() {
   window.setTimeout(renderClock, 1000 - drift);
 }
 
+function weekOfYear(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+
 function renderCalendar(now) {
   dateEl.textContent =
     `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ` +
-    `星期${WEEKDAYS[now.getDay()]}`;
+    `星期${WEEKDAYS[now.getDay()]} · 第${weekOfYear(now)}周`;
 
   if (typeof Solar === "undefined") {
     lunarDateEl.textContent = "农历不可用";
@@ -356,8 +369,9 @@ function renderCalendar(now) {
   const solar = Solar.fromDate(now);
   const lunar = solar.getLunar();
   lunarDateEl.textContent =
-    `农历${lunar.getMonthInChinese()}月${lunar.getDayInChinese()} · ` +
-    `${lunar.getYearInGanZhi()}${lunar.getYearShengXiao()}年`;
+    `农历${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}日 · ` +
+    `${lunar.getYearInGanZhi()}${lunar.getYearShengXiao()}年 · ` +
+    `${lunar.getMonthInGanZhi()}月 · ${lunar.getDayInGanZhi()}日`;
   const festivals = [...solar.getFestivals(), ...lunar.getFestivals()];
   lunarTagEl.textContent = lunar.getJieQi() || festivals[0] || "";
 }
@@ -519,8 +533,14 @@ function weatherText(code) {
   return WEATHER_TEXT[code] ?? "未知";
 }
 
-function setAqi(value) {
+function dailyRange(min, max, unit) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return "";
+  return `(${Math.round(min)}${unit}~${Math.round(max)}${unit})`;
+}
+
+function setAqi(value, min, max) {
   weatherAqiEl.className = "chip-value";
+  weatherAqiRangeEl.textContent = dailyRange(min, max, "");
   if (!Number.isFinite(value)) {
     weatherAqiEl.textContent = "--";
     return;
@@ -561,11 +581,24 @@ async function updateWeather(location) {
     weatherLabelEl.textContent = `${location.city} · ${weatherText(current.weather_code)}`;
     weatherTempEl.textContent = `${Math.round(temperature)}°`;
     weatherHumidityEl.textContent = `${Math.round(humidity)}%`;
+    const daily = data.daily ?? {};
+    weatherTempRangeEl.textContent = dailyRange(
+      Number(daily.temperature_2m_min?.[0]),
+      Number(daily.temperature_2m_max?.[0]),
+      "°",
+    );
+    weatherHumidityRangeEl.textContent = dailyRange(
+      Number(daily.relative_humidity_2m_min?.[0]),
+      Number(daily.relative_humidity_2m_max?.[0]),
+      "%",
+    );
   } catch (error) {
     console.error("天气获取失败", error);
     weatherLabelEl.textContent = `${location.city} · 天气获取失败`;
     weatherTempEl.textContent = "--°";
     weatherHumidityEl.textContent = "--%";
+    weatherTempRangeEl.textContent = "";
+    weatherHumidityRangeEl.textContent = "";
   }
 }
 
@@ -575,7 +608,12 @@ async function updateAir(location) {
       AIR_URL.replace("{lat}", location.latitude).replace("{lon}", location.longitude),
       20000,
     );
-    setAqi(Number(data.current?.us_aqi));
+    const hourly = (data.hourly?.us_aqi ?? []).map(Number).filter(Number.isFinite);
+    setAqi(
+      Number(data.current?.us_aqi),
+      hourly.length ? Math.min(...hourly) : NaN,
+      hourly.length ? Math.max(...hourly) : NaN,
+    );
   } catch (error) {
     console.error("空气质量获取失败", error);
     setAqi(NaN);
