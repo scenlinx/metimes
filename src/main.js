@@ -37,12 +37,14 @@ const setFontEl = document.getElementById("set-font");
 const fontPanelEl = document.getElementById("font-panel");
 const fontOptionsEl = document.getElementById("font-options");
 const fontCloseEl = document.getElementById("font-close");
+const fontCancelEl = document.getElementById("font-cancel");
 const countdownListEl = document.getElementById("countdown-list");
 const countdownNameEl = document.getElementById("countdown-name");
 const countdownDateEl = document.getElementById("countdown-date");
 const countdownAddEl = document.getElementById("countdown-add");
 const countdownManageListEl = document.getElementById("countdown-manage-list");
 const countdownCloseEl = document.getElementById("countdown-close");
+const countdownCancelEl = document.getElementById("countdown-cancel");
 
 const STORAGE_KEYS = {
   alwaysOnTop: "metimes:always-on-top",
@@ -282,6 +284,7 @@ function renderCountdownManage() {
 function openCountdownPanel() {
   hideMenu();
   hideLocator();
+  countdownSnapshot = JSON.parse(JSON.stringify(countdowns));
   countdownPanelEl.hidden = false;
   countdownDateEl.min = formatISODate(new Date());
   renderCountdownManage();
@@ -290,6 +293,13 @@ function openCountdownPanel() {
 
 function hideCountdownPanel() {
   countdownPanelEl.hidden = true;
+}
+
+function cancelCountdownPanel() {
+  countdowns = JSON.parse(JSON.stringify(countdownSnapshot));
+  saveCountdowns();
+  renderCountdowns();
+  hideCountdownPanel();
 }
 
 function addCountdown() {
@@ -331,6 +341,8 @@ const AUTO_HOLIDAYS = [
 ];
 
 let countdowns = readCountdowns();
+let fontSnapshot = null;
+let countdownSnapshot = [];
 
 async function syncClock() {
   if (!invoke) return;
@@ -696,12 +708,22 @@ function openFontPanel() {
   hideMenu();
   hideLocator();
   hideCountdownPanel();
+  fontSnapshot = prefs.clockFont;
   fontPanelEl.hidden = false;
   applyPrefs();
 }
 
 function hideFontPanel() {
   fontPanelEl.hidden = true;
+}
+
+function cancelFontPanel() {
+  if (prefs.clockFont !== fontSnapshot) {
+    prefs.clockFont = fontSnapshot;
+    localStorage.setItem(STORAGE_KEYS.clockFont, fontSnapshot);
+    applyPrefs();
+  }
+  hideFontPanel();
 }
 
 function setClockFont(font) {
@@ -800,12 +822,14 @@ setCityEl.addEventListener("click", openLocator);
 setCountdownsEl.addEventListener("click", openCountdownPanel);
 setFontEl.addEventListener("click", openFontPanel);
 fontCloseEl.addEventListener("click", hideFontPanel);
+fontCancelEl.addEventListener("click", cancelFontPanel);
 fontOptionsEl.addEventListener("click", (event) => {
   const option = event.target.closest(".font-option");
   if (option) setClockFont(option.dataset.font);
 });
 countdownAddEl.addEventListener("click", addCountdown);
 countdownCloseEl.addEventListener("click", hideCountdownPanel);
+countdownCancelEl.addEventListener("click", cancelCountdownPanel);
 countdownNameEl.addEventListener("keydown", (event) => {
   if (event.key === "Enter") addCountdown();
 });
