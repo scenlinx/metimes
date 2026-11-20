@@ -30,6 +30,7 @@ const locateAutoEl = document.getElementById("locate-auto");
 const locateCancelEl = document.getElementById("locate-cancel");
 const setCityEl = document.getElementById("set-city");
 const toggleLockEl = document.getElementById("toggle-lock");
+const toggleAutostartEl = document.getElementById("toggle-autostart");
 const setCountdownsEl = document.getElementById("set-countdowns");
 const countdownPanelEl = document.getElementById("countdown-panel");
 const timeEl = document.getElementById("time");
@@ -479,6 +480,34 @@ function toggleSeconds() {
   applyPrefs();
 }
 
+async function updateAutostartState() {
+  if (!invoke) {
+    toggleAutostartEl.setAttribute("aria-checked", "false");
+    return;
+  }
+  try {
+    const enabled = await invoke("plugin:autostart|is_enabled");
+    toggleAutostartEl.setAttribute("aria-checked", String(enabled));
+  } catch (error) {
+    console.error("读取开机启动状态失败", error);
+  }
+}
+
+async function toggleAutostart() {
+  if (!invoke) return;
+  try {
+    const enabled = await invoke("plugin:autostart|is_enabled");
+    if (enabled) {
+      await invoke("plugin:autostart|disable");
+    } else {
+      await invoke("plugin:autostart|enable");
+    }
+  } catch (error) {
+    console.error("切换开机启动失败", error);
+  }
+  updateAutostartState();
+}
+
 async function getJson(url, timeout = 12000) {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeout);
@@ -817,6 +846,7 @@ window.addEventListener("blur", hideMenu);
 toggleTopEl.addEventListener("click", toggleAlwaysOnTop);
 toggleSecondsEl.addEventListener("click", toggleSeconds);
 toggleLockEl.addEventListener("click", toggleLock);
+toggleAutostartEl.addEventListener("click", toggleAutostart);
 refreshWeatherEl.addEventListener("click", () => refreshWeather());
 setCityEl.addEventListener("click", openLocator);
 setCountdownsEl.addEventListener("click", openCountdownPanel);
@@ -886,6 +916,7 @@ try {
 }
 
 applyPrefs();
+updateAutostartState();
 renderCountdowns();
 renderClock();
 syncClock();
