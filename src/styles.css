@@ -6,6 +6,15 @@
   font-display: swap;
 }
 
+/* 随应用内置的等宽字体（SIL OFL 1.1，授权文本见 vendor/JetBrainsMono-OFL.txt） */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("vendor/JetBrainsMono-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --accent: #8b7bff;
   --accent-2: #55d6ff;
@@ -122,32 +131,61 @@ body {
 }
 
 .time {
+  --time-font: "DSEG7", "Segoe UI", monospace;
+  --time-size: 56px;
+  --time-line: 1;
+  --time-lift: 0px;
+  --time-weight: 700;
+  --time-tracking: 0px;
   position: relative;
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 1px;
+}
+
+/* 等宽字体：内置 JetBrains Mono，缺字时回落到系统等宽 */
+.time.font-mono {
+  --time-font: "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
+  --time-size: 76px;
+  --time-line: 0.742;
+  --time-weight: 500;
+  --time-tracking: 0px;
 }
 
 .time-card {
   position: relative;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 2px;
-  border-radius: var(--radius);
-  border: 1px solid rgba(255, 255, 255, 0.055);
-  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 翻页钟冒号：上下两个圆点 */
+.time-colon {
+  flex: none;
+  width: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+}
+
+.time-colon span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text);
 }
 
 /* 底影层：固定绘制「88」，用低透明度呈现未点亮的段 */
 .time-card-ghost,
 .time-card-value {
-  font-family: "DSEG7", "Segoe UI", monospace;
-  font-size: 46px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--time-font);
+  font-size: var(--time-size);
+  font-weight: var(--time-weight);
+  line-height: var(--time-line);
+  letter-spacing: var(--time-tracking);
 }
 
 .time-card-ghost {
@@ -165,6 +203,7 @@ body {
   display: block;
   position: relative;
   z-index: 1;
+  transform: translateY(var(--time-lift));
   text-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
   transition: opacity 0.2s ease;
 }
@@ -175,6 +214,11 @@ body {
 
 .time-card-seconds .time-card-ghost {
   color: rgba(139, 123, 255, 0.24);
+}
+
+/* 实心字体自带完整字形，只有七段模式需要底影层 */
+.time.font-mono .time-card-ghost {
+  display: none;
 }
 
 .date {
@@ -486,6 +530,64 @@ body {
   background: rgba(139, 123, 255, 0.18);
 }
 
+/* 时间字体选择面板：两行选项 */
+.font-panel {
+  padding: 12px;
+  gap: 6px;
+}
+
+.font-options {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.font-option {
+  flex: none;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 9px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.font-option:hover {
+  background: rgba(139, 123, 255, 0.18);
+}
+
+.font-option[aria-checked="true"] {
+  border-color: rgba(139, 123, 255, 0.62);
+  background: rgba(139, 123, 255, 0.2);
+}
+
+.font-sample {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sample-dseg {
+  font-family: "DSEG7", monospace;
+  font-weight: 700;
+}
+
+.sample-mono {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-weight: 500;
+}
+
 .aqi-good {
   color: #6fd68c;
 }
@@ -517,12 +619,14 @@ body {
 .menu {
   position: fixed;
   z-index: 20;
-  min-width: 148px;
-  max-height: calc(100vh - 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
   overflow-y: auto;
-  padding: 5px;
-  border-radius: 4px;
+  border-radius: 0 var(--radius) var(--radius) 0;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 0;
   background: var(--menu-bg);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
@@ -537,11 +641,11 @@ body {
 @keyframes menu-in {
   from {
     opacity: 0;
-    transform: translateY(-4px) scale(0.98);
+    transform: translateX(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateX(0);
   }
 }
 

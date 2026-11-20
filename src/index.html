@@ -16,10 +16,12 @@
                 <span class="time-card-ghost" aria-hidden="true">88</span>
                 <span class="time-card-value" id="clock-hour">--</span>
               </div>
+              <div class="time-colon" aria-hidden="true"><span></span><span></span></div>
               <div class="time-card">
                 <span class="time-card-ghost" aria-hidden="true">88</span>
                 <span class="time-card-value" id="clock-minute">--</span>
               </div>
+              <div class="time-colon" aria-hidden="true"><span></span><span></span></div>
               <div class="time-card time-card-seconds" id="clock-seconds-card">
                 <span class="time-card-ghost" aria-hidden="true">88</span>
                 <span class="time-card-value" id="clock-seconds">--</span>
@@ -81,6 +83,22 @@
         </div>
       </div>
 
+      <div class="locator font-panel" id="font-panel" hidden>
+        <div class="font-options" id="font-options">
+          <button class="font-option" data-font="dseg" role="radio" aria-checked="true">
+            <span>七段数码管</span>
+            <span class="font-sample sample-dseg">12:34</span>
+          </button>
+          <button class="font-option" data-font="mono" role="radio" aria-checked="false">
+            <span>JetBrains Mono</span>
+            <span class="font-sample sample-mono">12:34</span>
+          </button>
+        </div>
+        <div class="locator-actions">
+          <button class="locator-btn" id="font-close">完成</button>
+        </div>
+      </div>
+
       <div class="locator" id="locator" hidden>
         <input
           class="locator-input"
@@ -111,6 +129,10 @@
       <button class="menu-item" id="toggle-lock" role="menuitemcheckbox" aria-checked="false">
         <span class="check" aria-hidden="true">✓</span>
         <span>锁定位置</span>
+      </button>
+      <button class="menu-item" id="set-font" role="menuitem">
+        <span class="check" aria-hidden="true"></span>
+        <span>时间字体…</span>
       </button>
       <button class="menu-item" id="set-city" role="menuitem">
         <span class="check" aria-hidden="true"></span>

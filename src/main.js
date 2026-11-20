@@ -32,6 +32,11 @@ const setCityEl = document.getElementById("set-city");
 const toggleLockEl = document.getElementById("toggle-lock");
 const setCountdownsEl = document.getElementById("set-countdowns");
 const countdownPanelEl = document.getElementById("countdown-panel");
+const timeEl = document.getElementById("time");
+const setFontEl = document.getElementById("set-font");
+const fontPanelEl = document.getElementById("font-panel");
+const fontOptionsEl = document.getElementById("font-options");
+const fontCloseEl = document.getElementById("font-close");
 const countdownListEl = document.getElementById("countdown-list");
 const countdownNameEl = document.getElementById("countdown-name");
 const countdownDateEl = document.getElementById("countdown-date");
@@ -44,9 +49,17 @@ const STORAGE_KEYS = {
   showSeconds: "metimes:show-seconds",
   lockPosition: "metimes:lock-position",
   clockOffset: "metimes:clock-offset",
+  clockFont: "metimes:clock-font",
   location: "metimes:location-v5",
   countdowns: "metimes:countdowns",
 };
+
+const CLOCK_FONTS = ["dseg", "mono"];
+
+function readClockFont() {
+  const stored = localStorage.getItem(STORAGE_KEYS.clockFont);
+  return CLOCK_FONTS.includes(stored) ? stored : "dseg";
+}
 
 const LOCATION_TTL = 6 * 60 * 60 * 1000;
 const WEATHER_INTERVAL = 10 * 60 * 1000;
@@ -99,6 +112,7 @@ const prefs = {
   alwaysOnTop: readBool(STORAGE_KEYS.alwaysOnTop, true),
   showSeconds: readBool(STORAGE_KEYS.showSeconds, true),
   lockPosition: readBool(STORAGE_KEYS.lockPosition, false),
+  clockFont: readClockFont(),
 };
 
 const pad = (value) => String(value).padStart(2, "0");
@@ -389,6 +403,12 @@ function applyPrefs() {
   toggleTopEl.setAttribute("aria-checked", String(prefs.alwaysOnTop));
   toggleLockEl.setAttribute("aria-checked", String(prefs.lockPosition));
   widget.classList.toggle("locked", prefs.lockPosition);
+
+  timeEl.classList.remove("font-dseg", "font-mono");
+  timeEl.classList.add(`font-${prefs.clockFont}`);
+  for (const option of fontOptionsEl.querySelectorAll(".font-option")) {
+    option.setAttribute("aria-checked", String(option.dataset.font === prefs.clockFont));
+  }
 }
 
 async function applyAlwaysOnTop() {
@@ -404,13 +424,16 @@ function hideMenu() {
   menuEl.hidden = true;
 }
 
-function showMenu(x, y) {
+function showMenu() {
   menuEl.hidden = false;
-  const { width, height } = menuEl.getBoundingClientRect();
-  const left = Math.min(x, window.innerWidth - width - 6);
-  const top = Math.min(y, window.innerHeight - height - 6);
-  menuEl.style.left = `${Math.max(6, left)}px`;
-  menuEl.style.top = `${Math.max(6, top)}px`;
+  const rect = widget.getBoundingClientRect();
+  const w = rect.width / 3;
+  menuEl.style.left = `${rect.left + rect.width * (2 / 3)}px`;
+  menuEl.style.top = `${rect.top}px`;
+  menuEl.style.width = `${w}px`;
+  menuEl.style.height = `${rect.height}px`;
+  menuEl.style.maxWidth = "none";
+  menuEl.style.maxHeight = "none";
 }
 
 async function startDrag(event) {
@@ -669,6 +692,25 @@ function hideLocator() {
   citySearchToken += 1;
 }
 
+function openFontPanel() {
+  hideMenu();
+  hideLocator();
+  hideCountdownPanel();
+  fontPanelEl.hidden = false;
+  applyPrefs();
+}
+
+function hideFontPanel() {
+  fontPanelEl.hidden = true;
+}
+
+function setClockFont(font) {
+  if (!CLOCK_FONTS.includes(font) || font === prefs.clockFont) return;
+  prefs.clockFont = font;
+  localStorage.setItem(STORAGE_KEYS.clockFont, font);
+  applyPrefs();
+}
+
 async function searchCity(query) {
   const keyword = query.trim();
   if (!keyword) {
@@ -728,8 +770,8 @@ widget.addEventListener("pointerdown", startDrag);
 
 document.addEventListener("contextmenu", (event) => {
   event.preventDefault();
-  if (!event.target.closest(".menu") && locatorEl.hidden && countdownPanelEl.hidden) {
-    showMenu(event.clientX, event.clientY);
+  if (!event.target.closest(".menu") && locatorEl.hidden && countdownPanelEl.hidden && fontPanelEl.hidden) {
+    showMenu();
   }
 });
 
@@ -744,6 +786,7 @@ document.addEventListener("keydown", (event) => {
     hideMenu();
     hideLocator();
     hideCountdownPanel();
+    hideFontPanel();
   }
 });
 
@@ -755,6 +798,12 @@ toggleLockEl.addEventListener("click", toggleLock);
 refreshWeatherEl.addEventListener("click", () => refreshWeather());
 setCityEl.addEventListener("click", openLocator);
 setCountdownsEl.addEventListener("click", openCountdownPanel);
+setFontEl.addEventListener("click", openFontPanel);
+fontCloseEl.addEventListener("click", hideFontPanel);
+fontOptionsEl.addEventListener("click", (event) => {
+  const option = event.target.closest(".font-option");
+  if (option) setClockFont(option.dataset.font);
+});
 countdownAddEl.addEventListener("click", addCountdown);
 countdownCloseEl.addEventListener("click", hideCountdownPanel);
 countdownNameEl.addEventListener("keydown", (event) => {
