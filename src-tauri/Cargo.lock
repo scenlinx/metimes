@@ -2008,7 +2008,7 @@ dependencies = [
 
 [[package]]
 name = "metimes"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "httpdate",
  "reqwest 0.12.28",
