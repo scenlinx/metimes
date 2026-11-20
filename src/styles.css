@@ -134,9 +134,7 @@ body {
   --time-font: "DSEG7", "Segoe UI", monospace;
   --time-size: 56px;
   --time-line: 1;
-  --time-lift: 0px;
   --time-weight: 700;
-  --time-tracking: 0px;
   position: relative;
   display: flex;
   align-items: stretch;
@@ -149,7 +147,6 @@ body {
   --time-size: 76px;
   --time-line: 0.742;
   --time-weight: 500;
-  --time-tracking: 0px;
 }
 
 .time-card {
@@ -185,7 +182,6 @@ body {
   font-size: var(--time-size);
   font-weight: var(--time-weight);
   line-height: var(--time-line);
-  letter-spacing: var(--time-tracking);
 }
 
 .time-card-ghost {
@@ -203,7 +199,6 @@ body {
   display: block;
   position: relative;
   z-index: 1;
-  transform: translateY(var(--time-lift));
   text-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
   transition: opacity 0.2s ease;
 }
