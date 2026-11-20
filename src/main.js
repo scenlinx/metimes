@@ -2,8 +2,10 @@ const invoke =
   window.__TAURI__?.core?.invoke ?? window.__TAURI__?.invoke ?? null;
 
 const widget = document.getElementById("widget");
-const hmEl = document.getElementById("clock-hm");
+const hourEl = document.getElementById("clock-hour");
+const minuteEl = document.getElementById("clock-minute");
 const secondsEl = document.getElementById("clock-seconds");
+const secondsCardEl = document.getElementById("clock-seconds-card");
 const dateEl = document.getElementById("date");
 const lunarDateEl = document.getElementById("lunar-date");
 const lunarTagEl = document.getElementById("lunar-tag");
@@ -331,8 +333,9 @@ async function syncClock() {
 
 function renderClock() {
   const now = new Date(Date.now() + clockOffset);
-  hmEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  secondsEl.textContent = `:${pad(now.getSeconds())}`;
+  hourEl.textContent = pad(now.getHours());
+  minuteEl.textContent = pad(now.getMinutes());
+  secondsEl.textContent = pad(now.getSeconds());
 
   const dayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
   if (dayKey !== lastDayKey) {
@@ -381,7 +384,7 @@ function renderCalendar(now) {
 }
 
 function applyPrefs() {
-  secondsEl.classList.toggle("hidden", !prefs.showSeconds);
+  secondsCardEl.classList.toggle("hidden", !prefs.showSeconds);
   toggleSecondsEl.setAttribute("aria-checked", String(prefs.showSeconds));
   toggleTopEl.setAttribute("aria-checked", String(prefs.alwaysOnTop));
   toggleLockEl.setAttribute("aria-checked", String(prefs.lockPosition));

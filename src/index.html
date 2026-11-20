@@ -12,7 +12,18 @@
         <div class="top-row">
           <div class="clock">
             <div class="time" id="time">
-              <span id="clock-hm">--:--</span><span class="seconds" id="clock-seconds">:--</span>
+              <div class="time-card">
+                <span class="time-card-ghost" aria-hidden="true">88</span>
+                <span class="time-card-value" id="clock-hour">--</span>
+              </div>
+              <div class="time-card">
+                <span class="time-card-ghost" aria-hidden="true">88</span>
+                <span class="time-card-value" id="clock-minute">--</span>
+              </div>
+              <div class="time-card time-card-seconds" id="clock-seconds-card">
+                <span class="time-card-ghost" aria-hidden="true">88</span>
+                <span class="time-card-value" id="clock-seconds">--</span>
+              </div>
             </div>
             <div class="date" id="date">正在同步时间…</div>
             <div class="lunar" id="lunar">
