@@ -51,9 +51,6 @@ const WEATHER_INTERVAL = 10 * 60 * 1000;
 const WEATHER_RETRY = 2 * 60 * 1000;
 
 const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
-const REVERSE_GEO_URL =
-  "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}" +
-  "&longitude={lon}&localityLanguage=zh";
 const WEATHER_URL =
   "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}" +
   "&current=temperature_2m,relative_humidity_2m,weather_code" +
@@ -473,9 +470,8 @@ async function locateSystem() {
   try {
     const system = await invoke("locate_system");
     if (system && Number.isFinite(system.latitude) && Number.isFinite(system.longitude)) {
-      const city = (await reverseGeocodeZh(system.latitude, system.longitude)) || "当前位置";
       return {
-        city,
+        city: "当前位置",
         latitude: system.latitude,
         longitude: system.longitude,
         ts: Date.now(),
@@ -494,7 +490,7 @@ async function locateDirect() {
     const direct = await invoke("locate_direct");
     if (direct && Number.isFinite(direct.latitude) && Number.isFinite(direct.longitude)) {
       return {
-        city: direct.city,
+        city: direct.city || "当前位置",
         latitude: direct.latitude,
         longitude: direct.longitude,
         ts: Date.now(),
@@ -507,33 +503,21 @@ async function locateDirect() {
   return null;
 }
 
+// 先走国内 IP 库定位：一次请求即拿到中文城市名 + 坐标；系统定位只提供坐标，作为兜底
 async function locate() {
-  const system = await locateSystem();
-  if (system) {
-    localStorage.setItem(STORAGE_KEYS.location, JSON.stringify(system));
-    return system;
-  }
-
   const direct = await locateDirect();
   if (direct) {
     localStorage.setItem(STORAGE_KEYS.location, JSON.stringify(direct));
     return direct;
   }
 
-  throw new Error("定位失败");
-}
-
-async function reverseGeocodeZh(latitude, longitude) {
-  try {
-    const zh = await getJson(
-      REVERSE_GEO_URL.replace("{lat}", latitude).replace("{lon}", longitude),
-      10000,
-    );
-    return zh.city || zh.locality || "";
-  } catch (error) {
-    console.warn("地名翻译失败", error);
-    return "";
+  const system = await locateSystem();
+  if (system) {
+    localStorage.setItem(STORAGE_KEYS.location, JSON.stringify(system));
+    return system;
   }
+
+  throw new Error("定位失败");
 }
 
 function weatherText(code) {
@@ -814,6 +798,16 @@ quitEl.addEventListener("click", () => {
     invoke("quit_app");
   }
 });
+
+// 旧版本把"当前位置"当作城市名缓存 6 小时，升级后清掉一次，让新逻辑重新取到具体城市
+try {
+  const cached = JSON.parse(localStorage.getItem(STORAGE_KEYS.location));
+  if (cached && !cached.manual && cached.city === "当前位置") {
+    localStorage.removeItem(STORAGE_KEYS.location);
+  }
+} catch {
+  localStorage.removeItem(STORAGE_KEYS.location);
+}
 
 applyPrefs();
 renderCountdowns();
